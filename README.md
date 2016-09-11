@@ -6,7 +6,8 @@ Nginx-to-Apache proxy that picks the backend server based on the requested URI
 The intent of this setup is to demonstrate a method for migrating a website to
 a new server, or a new content management system, one URI at a time. By taking
 this approach you do not have to have your entire site ready for transition at
-the same time.
+the same time. This means getting the new content out sooner and shortening the
+time between start and finish for each section of your site.
 
 The flow of a request for a web page when using this setup looks like this:
 
