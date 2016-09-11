@@ -48,6 +48,9 @@ class { '::apache':
   dev_packages          => 'httpd24-httpd-devel',
   docroot               => "${scl_httpd}/var/www/html",
   httpd_dir             => "${scl_httpd}/etc/httpd",
+  log_formats           => {
+    combined => '%a %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"',
+  },
   logroot               => '/var/log/httpd24',
   mod_dir               => "${scl_httpd}/etc/httpd/conf.modules.d",
   mpm_module            => 'worker',
@@ -200,6 +203,12 @@ apache::vhost { 'new-site-ssl-2':
 
 class { '::apache::dev': }
 class { '::apache::mod::proxy': }
+class { '::apache::mod::remoteip':
+  header            => 'X-Forwarded-For',
+  proxy_ips         => [
+    '127.0.0.1',
+  ],
+}
 class { '::apache::mod::ssl':
   package_name => 'httpd24-mod_ssl',
 }
