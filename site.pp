@@ -7,7 +7,10 @@ exec { 'create localhost cert':
   # lint:endignore
   creates   => '/etc/pki/tls/certs/localhost.crt',
   logoutput => true,
-  before    => Class['apache'],
+  before    => [
+    Class['::apache'],
+    Class['::nginx_proxy'],
+  ],
 }
 
 exec { 'create old-site cert':
@@ -17,7 +20,10 @@ exec { 'create old-site cert':
   # lint:endignore
   creates   => '/etc/pki/tls/certs/old-site.crt',
   logoutput => true,
-  before    => Class['apache'],
+  before    => [
+    Class['::apache'],
+    Class['::nginx_proxy'],
+  ],
 }
 
 exec { 'create new-site cert':
@@ -27,12 +33,20 @@ exec { 'create new-site cert':
   # lint:endignore
   creates   => '/etc/pki/tls/certs/new-site.crt',
   logoutput => true,
-  before    => Class['apache'],
+  before    => [
+    Class['::apache'],
+    Class['::nginx_proxy'],
+  ],
 }
 
 user { $website_owner:
   ensure => present,
-  before => Class['apache'],
+  before => Class['::apache'],
+}
+
+package { 'centos-release-scl-rh':
+  ensure => installed,
+  before => Class['::apache'],
 }
 
 $scl_httpd = '/opt/rh/httpd24/root'
@@ -204,8 +218,8 @@ apache::vhost { 'new-site-ssl-2':
 class { '::apache::dev': }
 class { '::apache::mod::proxy': }
 class { '::apache::mod::remoteip':
-  header            => 'X-Forwarded-For',
-  proxy_ips         => [
+  header    => 'X-Forwarded-For',
+  proxy_ips => [
     '127.0.0.1',
   ],
 }
@@ -258,4 +272,84 @@ service { 'mariadb55-mariadb.service':
   ensure  => running,
   enable  => true,
   require => Package['mariadb55-mariadb-server'],
+}
+
+package { 'nginx':
+  ensure => installed,
+}
+
+class { '::nginx_proxy':
+  locations => [
+    {
+      order          => '001',
+      exact          => true,
+      path           => '/',
+      redirect       => true,
+      https_upstream => 'new_backend_https',
+    },
+    {
+      order          => '002',
+      exact          => true,
+      path           => '/index.php',
+      redirect       => true,
+      https_upstream => 'new_backend_https',
+    },
+    {
+      order          => '003',
+      exact          => false,
+      path           => '/part1',
+      redirect       => true,
+      https_upstream => 'new_backend_https',
+    },
+    {
+      order          => '004',
+      exact          => true,
+      path           => '/part2/special/page.php',
+      redirect       => true,
+      https_upstream => 'new_backend_https',
+    },
+    {
+      order          => '999',
+      exact          => false,
+      path           => '/',
+      redirect       => false,
+      http_upstream  => 'old_backend_http',
+      https_upstream => 'old_backend_https',
+    },
+    {
+      order          => '005',
+      exact          => false,
+      path           => '/part3',
+      redirect       => true,
+      https_upstream => 'new_backend_https',
+    },
+  ],
+  upstreams => [
+    {
+      title   => 'old_backend_http',
+      servers => [
+        '127.0.0.1:8081',
+      ],
+    },
+    {
+      title   => 'old_backend_https',
+      servers => [
+        '127.0.0.1:8444',
+      ],
+    },
+    {
+      title     => 'new_backend_https',
+      lb_method => 'ip_hash',
+      servers   => [
+        '127.0.0.1:9444',
+        '127.0.0.1:10444',
+      ],
+    },
+  ],
+}
+
+service { 'nginx':
+  ensure  => running,
+  enable  => true,
+  require => Class['::nginx_proxy'],
 }
