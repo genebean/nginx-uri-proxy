@@ -20,16 +20,11 @@ Vagrant.configure(2) do |config|
     gem install --no-ri --no-rdoc bundler
     puppet module install puppetlabs-apache
     puppet module install Slashbunny-phpfpm
-    puppet module install puppetlabs/vcsrepo
+    puppet module install genebean-nginx_proxy
 
-
-    puppet resource package centos-release-scl-rh ensure=installed
     echo --- > /etc/puppet/hiera.yaml
     puppet apply /vagrant/site.pp
-
-    puppet resource package nginx ensure=installed
-    rsync /vagrant/files/nginx.conf /etc/nginx/nginx.conf
-    puppet resource service nginx ensure=running enable=true
+    puppet apply /vagrant/site.pp
   SHELL1
 
   config.vm.provision "shell", inline: <<-SHELL2
